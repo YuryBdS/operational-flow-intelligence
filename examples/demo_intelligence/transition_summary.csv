@@ -1,0 +1,6 @@
+﻿flow_class,transition_pairs,transition_case_occurrences,transition_volume_share_pct
+Core Flow,6,11272,80.41090027108004
+Exception Flow,5,1494,10.657725781138536
+Optional / Rule Flow,4,528,3.7665858182336995
+Exit Flow,2,405,2.889142531031531
+Bypass Flow,2,319,2.2756455985161934

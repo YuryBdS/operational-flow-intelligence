@@ -1,0 +1,6 @@
+1. The complete core path represents 34.76% of analyzed cases.
+2. Paths containing exception activities appear in 19.92% of analyzed cases.
+3. Paths containing exit activities appear in 16.20% of analyzed cases.
+4. The highest-volume observed bypass is 'System Upload → Quality Review', with 250 observed cases.
+5. Among activities classified as operational, the highest median duration is observed in 'Requester Pending' (20.28 h).
+6. Classifications are analytical signals derived from the available process history and should be validated with operational context before being treated as errors, bottlenecks, or non-conformities.

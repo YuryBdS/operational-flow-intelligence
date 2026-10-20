@@ -1,0 +1,13 @@
+﻿activity,cases,events,avg_duration_hours,median_duration_hours,case_coverage_pct,activity_type,duration_interpretation
+Intake,2500,2500,20.9180763792,16.084625,100.0,Operational,Operational time signal. Interpret with process context.
+Data Preparation,2250,2250,1.2719232537777778,1.0152465,90.0,Operational,Operational time signal. Interpret with process context.
+System Upload,2250,2250,1.552027185777778,1.259448,90.0,Operational,Operational time signal. Interpret with process context.
+Scheduled / Waiting Start,2000,2000,82.47506288946549,72.021417,80.0,Business Waiting,Business waiting or lifecycle time. Do not interpret automatically as effort.
+Quality Review,1953,1953,15.476088442317916,11.947932,78.12,Operational,Operational time signal. Interpret with process context.
+Completed,1950,1950,,,78.0,Terminal State,Terminal process state. Duration should not be interpreted automatically as an operational bottleneck.
+Validated / Active,1950,1950,272.0655649743589,244.1306395000001,78.0,Business Waiting,Business waiting or lifecycle time. Do not interpret automatically as effort.
+Pending Return,498,498,1.738297265060241,1.4585705,19.92,Operational,Operational time signal. Interpret with process context.
+Requester Pending,498,498,28.6204788995984,20.2796685,19.92,Operational,Operational time signal. Interpret with process context.
+Cancelled / Rejected,405,405,,,16.2,Terminal State,Terminal process state. Duration should not be interpreted automatically as an operational bottleneck.
+Prioritization,143,143,2.4174982447552447,1.975788,5.72,Operational,Operational time signal. Interpret with process context.
+Platform Validation,121,121,3.6715366446281,2.874496999999999,4.84,Operational,Operational time signal. Interpret with process context.

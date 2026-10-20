@@ -1,0 +1,7 @@
+﻿primary_flow_class,cases,variants,share_pct
+Core Flow,869,1,34.760000000000005
+Exception Flow,498,2,19.919999999999998
+Exit Flow,405,2,16.2
+Bypass Flow,319,2,12.76
+Optional / Rule Flow,264,2,10.56
+Other Flow,145,2,5.800000000000001

@@ -1,0 +1,20 @@
+﻿source_activity,target_activity,case_count,outgoing_share_pct,flow_class,transition,class_order
+Data Preparation,System Upload,2043,90.8,Core Flow,Data Preparation → System Upload,1
+Validated / Active,Completed,1950,100.0,Core Flow,Validated / Active → Completed,1
+Quality Review,Validated / Active,1881,100.0,Core Flow,Quality Review → Validated / Active,1
+System Upload,Scheduled / Waiting Start,1879,83.51111111111112,Core Flow,System Upload → Scheduled / Waiting Start,1
+Intake,Data Preparation,1816,72.64,Core Flow,Intake → Data Preparation,1
+Scheduled / Waiting Start,Quality Review,1703,88.37571354436949,Core Flow,Scheduled / Waiting Start → Quality Review,1
+Requester Pending,Pending Return,498,100.0,Exception Flow,Requester Pending → Pending Return,2
+Intake,Requester Pending,291,11.64,Exception Flow,Intake → Requester Pending,2
+Pending Return,Data Preparation,291,58.43373493975904,Exception Flow,Pending Return → Data Preparation,2
+Data Preparation,Requester Pending,207,9.2,Exception Flow,Data Preparation → Requester Pending,2
+Pending Return,System Upload,207,41.566265060240966,Exception Flow,Pending Return → System Upload,2
+Intake,Cancelled / Rejected,250,10.0,Exit Flow,Intake → Cancelled / Rejected,3
+Scheduled / Waiting Start,Cancelled / Rejected,155,8.043591074208614,Exit Flow,Scheduled / Waiting Start → Cancelled / Rejected,3
+System Upload,Quality Review,250,11.11111111111111,Bypass Flow,System Upload → Quality Review,4
+Scheduled / Waiting Start,Validated / Active,69,3.5806953814219,Bypass Flow,Scheduled / Waiting Start → Validated / Active,4
+Intake,Prioritization,143,5.72,Optional / Rule Flow,Intake → Prioritization,5
+Prioritization,Data Preparation,143,100.0,Optional / Rule Flow,Prioritization → Data Preparation,5
+Platform Validation,Scheduled / Waiting Start,121,100.0,Optional / Rule Flow,Platform Validation → Scheduled / Waiting Start,5
+System Upload,Platform Validation,121,5.377777777777778,Optional / Rule Flow,System Upload → Platform Validation,5

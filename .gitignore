@@ -15,9 +15,10 @@ data/output/*
 *.csv
 *.parquet
 
-# Future synthetic examples may be explicitly allowed
+# Public synthetic examples
 !examples/*.xlsx
 !examples/*.csv
+!examples/demo_intelligence/*.csv
 
 # Python
 .venv/
