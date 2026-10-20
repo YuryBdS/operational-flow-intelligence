@@ -1,0 +1,41 @@
+{
+  "profile_name": "Synthetic Demo Process",
+  "core_path": [
+    "Intake",
+    "Data Preparation",
+    "System Upload",
+    "Scheduled / Waiting Start",
+    "Quality Review",
+    "Validated / Active",
+    "Completed"
+  ],
+  "exception_activities": [
+    "Requester Pending",
+    "Pending Return"
+  ],
+  "exit_activities": [
+    "Cancelled / Rejected"
+  ],
+  "optional_rule_activities": [
+    "Prioritization",
+    "Platform Validation"
+  ],
+  "operational_activities": [
+    "Intake",
+    "Prioritization",
+    "Data Preparation",
+    "Requester Pending",
+    "Pending Return",
+    "Platform Validation",
+    "System Upload",
+    "Quality Review"
+  ],
+  "waiting_activities": [
+    "Scheduled / Waiting Start",
+    "Validated / Active"
+  ],
+  "terminal_activities": [
+    "Completed",
+    "Cancelled / Rejected"
+  ]
+}

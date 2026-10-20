@@ -1,64 +1,283 @@
 from __future__ import annotations
 
 import argparse
+import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
 
 
-CORE_PATH = [
-    "Caixa de entrada",
-    "Tratamento de dados",
-    "Upload no Magento",
-    "Lançado / Aguardando início",
-    "QA Promos vigentes",
-    "Promos vigentes validadas",
-    "Promos Encerradas",
-]
-
-EXCEPTION_ACTIVITIES = {
-    "Pendência solicitante",
-    "Retorno de Pendência",
-}
-
-EXIT_ACTIVITIES = {
-    "Canceladas / Rejeitadas",
-}
-
-OPTIONAL_RULE_ACTIVITIES = {
-    "Priorização",
-    "Validação Lançados no Magento",
-}
-
-OPERATIONAL_ACTIVITIES = {
-    "Caixa de entrada",
-    "Priorização",
-    "Tratamento de dados",
-    "Pendência solicitante",
-    "Retorno de Pendência",
-    "Validação Lançados no Magento",
-    "Upload no Magento",
-    "QA Promos vigentes",
-}
-
-WAITING_ACTIVITIES = {
-    "Lançado / Aguardando início",
-    "Promos vigentes validadas",
-}
-
-TERMINAL_ACTIVITIES = {
-    "Promos Encerradas",
-    "Canceladas / Rejeitadas",
-}
-
 PATH_SEPARATOR = " → "
 
+REQUIRED_PROFILE_FIELDS = {
+    "profile_name",
+    "core_path",
+    "exception_activities",
+    "exit_activities",
+    "optional_rule_activities",
+    "operational_activities",
+    "waiting_activities",
+    "terminal_activities",
+}
+
+
+# =========================================================
+# Process profile
+# =========================================================
+
+@dataclass(frozen=True)
+class FlowProfile:
+    profile_name: str
+    core_path: tuple[str, ...]
+    exception_activities: frozenset[str]
+    exit_activities: frozenset[str]
+    optional_rule_activities: frozenset[str]
+    operational_activities: frozenset[str]
+    waiting_activities: frozenset[str]
+    terminal_activities: frozenset[str]
+
+
+def normalize_string_list(
+    data: dict[str, object],
+    field_name: str,
+) -> list[str]:
+    value = data.get(field_name)
+
+    if not isinstance(value, list):
+        raise ValueError(
+            f"Profile field '{field_name}' must be a list."
+        )
+
+    normalized: list[str] = []
+
+    for item in value:
+        if not isinstance(item, str):
+            raise ValueError(
+                f"All values in '{field_name}' must be strings."
+            )
+
+        clean_item = item.strip()
+
+        if not clean_item:
+            raise ValueError(
+                f"Profile field '{field_name}' contains an empty value."
+            )
+
+        normalized.append(clean_item)
+
+    return normalized
+
+
+def validate_profile(
+    profile: FlowProfile,
+) -> None:
+    if len(profile.core_path) < 2:
+        raise ValueError(
+            "The profile core_path must contain at least two activities."
+        )
+
+    if len(set(profile.core_path)) != len(profile.core_path):
+        raise ValueError(
+            "The profile core_path cannot contain duplicate activities."
+        )
+
+    behavior_groups = {
+        "exception_activities": (
+            profile.exception_activities
+        ),
+        "exit_activities": (
+            profile.exit_activities
+        ),
+        "optional_rule_activities": (
+            profile.optional_rule_activities
+        ),
+    }
+
+    group_names = list(
+        behavior_groups.keys()
+    )
+
+    for index, first_name in enumerate(
+        group_names
+    ):
+        for second_name in group_names[
+            index + 1:
+        ]:
+            overlap = (
+                behavior_groups[first_name]
+                & behavior_groups[second_name]
+            )
+
+            if overlap:
+                overlap_text = ", ".join(
+                    sorted(overlap)
+                )
+
+                raise ValueError(
+                    "Behavior classifications cannot overlap. "
+                    f"'{first_name}' and '{second_name}' share: "
+                    f"{overlap_text}"
+                )
+
+    activity_type_groups = {
+        "operational_activities": (
+            profile.operational_activities
+        ),
+        "waiting_activities": (
+            profile.waiting_activities
+        ),
+        "terminal_activities": (
+            profile.terminal_activities
+        ),
+    }
+
+    type_names = list(
+        activity_type_groups.keys()
+    )
+
+    for index, first_name in enumerate(
+        type_names
+    ):
+        for second_name in type_names[
+            index + 1:
+        ]:
+            overlap = (
+                activity_type_groups[first_name]
+                & activity_type_groups[second_name]
+            )
+
+            if overlap:
+                overlap_text = ", ".join(
+                    sorted(overlap)
+                )
+
+                raise ValueError(
+                    "Activity type classifications cannot overlap. "
+                    f"'{first_name}' and '{second_name}' share: "
+                    f"{overlap_text}"
+                )
+
+
+def load_profile(
+    path: Path,
+) -> FlowProfile:
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Flow profile not found: {path}"
+        )
+
+    try:
+        data = json.loads(
+            path.read_text(
+                encoding="utf-8",
+            )
+        )
+
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"Invalid JSON profile: {path}"
+        ) from error
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            "Flow profile must contain a JSON object."
+        )
+
+    missing_fields = (
+        REQUIRED_PROFILE_FIELDS
+        - set(data.keys())
+    )
+
+    if missing_fields:
+        missing_text = ", ".join(
+            sorted(missing_fields)
+        )
+
+        raise ValueError(
+            "Flow profile is missing required fields: "
+            f"{missing_text}"
+        )
+
+    profile_name = data.get(
+        "profile_name"
+    )
+
+    if (
+        not isinstance(
+            profile_name,
+            str,
+        )
+        or not profile_name.strip()
+    ):
+        raise ValueError(
+            "Profile field 'profile_name' must be a non-empty string."
+        )
+
+    profile = FlowProfile(
+        profile_name=(
+            profile_name.strip()
+        ),
+        core_path=tuple(
+            normalize_string_list(
+                data,
+                "core_path",
+            )
+        ),
+        exception_activities=frozenset(
+            normalize_string_list(
+                data,
+                "exception_activities",
+            )
+        ),
+        exit_activities=frozenset(
+            normalize_string_list(
+                data,
+                "exit_activities",
+            )
+        ),
+        optional_rule_activities=frozenset(
+            normalize_string_list(
+                data,
+                "optional_rule_activities",
+            )
+        ),
+        operational_activities=frozenset(
+            normalize_string_list(
+                data,
+                "operational_activities",
+            )
+        ),
+        waiting_activities=frozenset(
+            normalize_string_list(
+                data,
+                "waiting_activities",
+            )
+        ),
+        terminal_activities=frozenset(
+            normalize_string_list(
+                data,
+                "terminal_activities",
+            )
+        ),
+    )
+
+    validate_profile(
+        profile
+    )
+
+    return profile
+
+
+# =========================================================
+# CLI
+# =========================================================
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Classifica variantes e transições descobertas "
-            "em sinais de comportamento operacional."
+            "Classifies discovered process variants and "
+            "transitions using a configurable flow profile."
         )
     )
 
@@ -66,10 +285,21 @@ def parse_arguments() -> argparse.Namespace:
         "discovery_dir",
         nargs="?",
         type=Path,
-        default=Path("data/output/discovery"),
+        default=Path(
+            "data/output/discovery"
+        ),
         help=(
-            "Diretório com os arquivos gerados pelo "
-            "Process Discovery Engine."
+            "Directory containing Process Discovery outputs. "
+            "Default: data/output/discovery"
+        ),
+    )
+
+    parser.add_argument(
+        "--profile",
+        type=Path,
+        required=True,
+        help=(
+            "JSON file containing the process flow profile."
         ),
     )
 
@@ -77,15 +307,21 @@ def parse_arguments() -> argparse.Namespace:
         "-o",
         "--output-dir",
         type=Path,
-        default=Path("data/output/intelligence"),
+        default=Path(
+            "data/output/intelligence"
+        ),
         help=(
-            "Diretório onde os resultados de inteligência "
-            "serão gerados."
+            "Directory where Flow Intelligence outputs "
+            "will be generated."
         ),
     )
 
     return parser.parse_args()
 
+
+# =========================================================
+# Data loading
+# =========================================================
 
 def load_csv(
     path: Path,
@@ -93,7 +329,7 @@ def load_csv(
 ) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(
-            f"Arquivo não encontrado: {path}"
+            f"File not found: {path}"
         )
 
     df = pd.read_csv(
@@ -101,45 +337,82 @@ def load_csv(
         encoding="utf-8-sig",
     )
 
-    missing = required_columns - set(df.columns)
+    missing_columns = (
+        required_columns
+        - set(df.columns)
+    )
 
-    if missing:
+    if missing_columns:
         missing_text = ", ".join(
-            sorted(missing)
+            sorted(
+                missing_columns
+            )
         )
 
         raise ValueError(
-            f"Arquivo {path.name} sem colunas obrigatórias: "
+            f"File {path.name} is missing required columns: "
             f"{missing_text}"
         )
 
     return df
 
 
-def get_core_transition_set() -> set[tuple[str, str]]:
+# =========================================================
+# Transition intelligence
+# =========================================================
+
+def get_core_transition_set(
+    profile: FlowProfile,
+) -> set[tuple[str, str]]:
     return set(
         zip(
-            CORE_PATH[:-1],
-            CORE_PATH[1:],
+            profile.core_path[:-1],
+            profile.core_path[1:],
         )
     )
+
+
+def get_core_position_map(
+    profile: FlowProfile,
+) -> dict[str, int]:
+    return {
+        activity: index
+        for index, activity in enumerate(
+            profile.core_path
+        )
+    }
 
 
 def classify_transition(
     source: str,
     target: str,
+    profile: FlowProfile,
 ) -> str:
-    source = str(source).strip()
-    target = str(target).strip()
+    source = str(
+        source
+    ).strip()
 
-    core_transitions = get_core_transition_set()
+    target = str(
+        target
+    ).strip()
 
-    if target in EXIT_ACTIVITIES:
+    core_transitions = (
+        get_core_transition_set(
+            profile
+        )
+    )
+
+    if (
+        target
+        in profile.exit_activities
+    ):
         return "Exit Flow"
 
     if (
-        source in EXCEPTION_ACTIVITIES
-        or target in EXCEPTION_ACTIVITIES
+        source
+        in profile.exception_activities
+        or target
+        in profile.exception_activities
     ):
         return "Exception Flow"
 
@@ -150,24 +423,30 @@ def classify_transition(
         return "Core Flow"
 
     if (
-        source in OPTIONAL_RULE_ACTIVITIES
-        or target in OPTIONAL_RULE_ACTIVITIES
+        source
+        in profile.optional_rule_activities
+        or target
+        in profile.optional_rule_activities
     ):
         return "Optional / Rule Flow"
 
-    core_position = {
-        activity: index
-        for index, activity in enumerate(
-            CORE_PATH
+    core_position = (
+        get_core_position_map(
+            profile
         )
-    }
+    )
 
     if (
         source in core_position
         and target in core_position
     ):
-        source_position = core_position[source]
-        target_position = core_position[target]
+        source_position = (
+            core_position[source]
+        )
+
+        target_position = (
+            core_position[target]
+        )
 
         if (
             target_position
@@ -179,42 +458,63 @@ def classify_transition(
             target_position
             <= source_position
         ):
-            return "Reverse / Deviation Flow"
+            return (
+                "Reverse / Deviation Flow"
+            )
 
     return "Other Flow"
 
 
 def classify_transitions(
     transitions: pd.DataFrame,
+    profile: FlowProfile,
 ) -> pd.DataFrame:
     result = transitions.copy()
 
-    result["case_count"] = pd.to_numeric(
-        result["case_count"],
-        errors="coerce",
-    ).fillna(0)
-
-    result["outgoing_share_pct"] = (
+    result["case_count"] = (
         pd.to_numeric(
-            result["outgoing_share_pct"],
+            result[
+                "case_count"
+            ],
             errors="coerce",
+        )
+        .fillna(0)
+    )
+
+    result[
+        "outgoing_share_pct"
+    ] = pd.to_numeric(
+        result[
+            "outgoing_share_pct"
+        ],
+        errors="coerce",
+    )
+
+    result["flow_class"] = (
+        result.apply(
+            lambda row: (
+                classify_transition(
+                    source=row[
+                        "source_activity"
+                    ],
+                    target=row[
+                        "target_activity"
+                    ],
+                    profile=profile,
+                )
+            ),
+            axis=1,
         )
     )
 
-    result["flow_class"] = result.apply(
-        lambda row: classify_transition(
-            row["source_activity"],
-            row["target_activity"],
-        ),
-        axis=1,
-    )
-
     result["transition"] = (
-        result["source_activity"]
-        .astype(str)
+        result[
+            "source_activity"
+        ].astype(str)
         + PATH_SEPARATOR
-        + result["target_activity"]
-        .astype(str)
+        + result[
+            "target_activity"
+        ].astype(str)
     )
 
     class_priority = {
@@ -228,33 +528,53 @@ def classify_transitions(
     }
 
     result["class_order"] = (
-        result["flow_class"]
-        .map(class_priority)
+        result[
+            "flow_class"
+        ]
+        .map(
+            class_priority
+        )
         .fillna(99)
     )
 
-    result = result.sort_values(
-        by=[
-            "class_order",
-            "case_count",
-        ],
-        ascending=[
-            True,
-            False,
-        ],
-        kind="stable",
-    ).reset_index(drop=True)
+    result = (
+        result
+        .sort_values(
+            by=[
+                "class_order",
+                "case_count",
+            ],
+            ascending=[
+                True,
+                False,
+            ],
+            kind="stable",
+        )
+        .reset_index(
+            drop=True
+        )
+    )
 
     return result
 
 
-def split_path(path: str) -> list[str]:
-    if pd.isna(path):
+# =========================================================
+# Variant intelligence
+# =========================================================
+
+def split_path(
+    path: str,
+) -> list[str]:
+    if pd.isna(
+        path
+    ):
         return []
 
     return [
         item.strip()
-        for item in str(path).split(
+        for item in str(
+            path
+        ).split(
             PATH_SEPARATOR
         )
         if item.strip()
@@ -263,8 +583,11 @@ def split_path(path: str) -> list[str]:
 
 def analyze_variant_path(
     path: str,
+    profile: FlowProfile,
 ) -> dict[str, object]:
-    activities = split_path(path)
+    activities = split_path(
+        path
+    )
 
     transitions = list(
         zip(
@@ -275,76 +598,109 @@ def analyze_variant_path(
 
     transition_classes = [
         classify_transition(
-            source,
-            target,
+            source=source,
+            target=target,
+            profile=profile,
         )
         for source, target in transitions
     ]
 
     has_exception = any(
-        activity in EXCEPTION_ACTIVITIES
+        activity
+        in profile.exception_activities
         for activity in activities
     )
 
     has_exit = any(
-        activity in EXIT_ACTIVITIES
+        activity
+        in profile.exit_activities
         for activity in activities
     )
 
     has_optional_rule = any(
-        activity in OPTIONAL_RULE_ACTIVITIES
+        activity
+        in profile.optional_rule_activities
         for activity in activities
     )
 
     bypass_count = sum(
-        flow_class == "Bypass Flow"
-        for flow_class in transition_classes
+        flow_class
+        == "Bypass Flow"
+        for flow_class
+        in transition_classes
     )
 
     reverse_deviation_count = sum(
         flow_class
         == "Reverse / Deviation Flow"
-        for flow_class in transition_classes
+        for flow_class
+        in transition_classes
     )
 
     exact_core_path = (
-        activities == CORE_PATH
+        tuple(
+            activities
+        )
+        == profile.core_path
     )
 
     if exact_core_path:
-        primary_class = "Core Flow"
+        primary_class = (
+            "Core Flow"
+        )
 
     elif has_exit:
-        primary_class = "Exit Flow"
+        primary_class = (
+            "Exit Flow"
+        )
 
     elif has_exception:
-        primary_class = "Exception Flow"
+        primary_class = (
+            "Exception Flow"
+        )
 
     elif bypass_count > 0:
-        primary_class = "Bypass Flow"
+        primary_class = (
+            "Bypass Flow"
+        )
 
     elif has_optional_rule:
         primary_class = (
             "Optional / Rule Flow"
         )
 
-    elif reverse_deviation_count > 0:
+    elif (
+        reverse_deviation_count
+        > 0
+    ):
         primary_class = (
             "Reverse / Deviation Flow"
         )
 
     else:
-        primary_class = "Other Flow"
+        primary_class = (
+            "Other Flow"
+        )
 
     return {
-        "primary_flow_class": primary_class,
-        "exact_core_path": exact_core_path,
-        "has_exception": has_exception,
-        "has_exit": has_exit,
+        "primary_flow_class": (
+            primary_class
+        ),
+        "exact_core_path": (
+            exact_core_path
+        ),
+        "has_exception": (
+            has_exception
+        ),
+        "has_exit": (
+            has_exit
+        ),
         "has_optional_rule": (
             has_optional_rule
         ),
-        "bypass_count": bypass_count,
+        "bypass_count": (
+            bypass_count
+        ),
         "reverse_deviation_count": (
             reverse_deviation_count
         ),
@@ -353,18 +709,35 @@ def analyze_variant_path(
 
 def classify_variants(
     variants: pd.DataFrame,
+    profile: FlowProfile,
 ) -> pd.DataFrame:
     result = variants.copy()
 
-    result["case_count"] = pd.to_numeric(
-        result["case_count"],
-        errors="coerce",
-    ).fillna(0)
+    result["case_count"] = (
+        pd.to_numeric(
+            result[
+                "case_count"
+            ],
+            errors="coerce",
+        )
+        .fillna(0)
+    )
 
     analyses = (
-        result["path"]
-        .apply(analyze_variant_path)
-        .apply(pd.Series)
+        result[
+            "path"
+        ]
+        .apply(
+            lambda path: (
+                analyze_variant_path(
+                    path=path,
+                    profile=profile,
+                )
+            )
+        )
+        .apply(
+            pd.Series
+        )
     )
 
     result = pd.concat(
@@ -378,18 +751,34 @@ def classify_variants(
     return result
 
 
+# =========================================================
+# Activity intelligence
+# =========================================================
+
 def classify_activity_type(
     activity: str,
+    profile: FlowProfile,
 ) -> str:
-    activity = str(activity).strip()
+    activity = str(
+        activity
+    ).strip()
 
-    if activity in TERMINAL_ACTIVITIES:
+    if (
+        activity
+        in profile.terminal_activities
+    ):
         return "Terminal State"
 
-    if activity in WAITING_ACTIVITIES:
+    if (
+        activity
+        in profile.waiting_activities
+    ):
         return "Business Waiting"
 
-    if activity in OPERATIONAL_ACTIVITIES:
+    if (
+        activity
+        in profile.operational_activities
+    ):
         return "Operational"
 
     return "Unclassified"
@@ -397,8 +786,11 @@ def classify_activity_type(
 
 def build_activity_intelligence(
     activity_summary: pd.DataFrame,
+    profile: FlowProfile,
 ) -> pd.DataFrame:
-    result = activity_summary.copy()
+    result = (
+        activity_summary.copy()
+    )
 
     numeric_columns = [
         "cases",
@@ -410,43 +802,64 @@ def build_activity_intelligence(
 
     for column in numeric_columns:
         if column in result.columns:
-            result[column] = pd.to_numeric(
-                result[column],
-                errors="coerce",
+            result[column] = (
+                pd.to_numeric(
+                    result[
+                        column
+                    ],
+                    errors="coerce",
+                )
             )
 
     result["activity_type"] = (
-        result["activity"]
+        result[
+            "activity"
+        ]
         .apply(
-            classify_activity_type
+            lambda activity: (
+                classify_activity_type(
+                    activity=activity,
+                    profile=profile,
+                )
+            )
         )
     )
 
     interpretation_map = {
         "Operational": (
-            "Tempo útil para análise operacional, "
-            "com validação de contexto."
+            "Operational time signal. "
+            "Interpret with process context."
         ),
         "Business Waiting": (
-            "Tempo de espera ou ciclo de negócio; "
-            "não interpretar automaticamente como esforço."
+            "Business waiting or lifecycle time. "
+            "Do not interpret automatically as effort."
         ),
         "Terminal State": (
-            "Estado final do processo; duração não deve "
-            "ser tratada como gargalo operacional."
+            "Terminal process state. Duration should not "
+            "be interpreted automatically as an operational bottleneck."
         ),
         "Unclassified": (
-            "Atividade ainda sem classificação analítica."
+            "Activity without an analytical type classification."
         ),
     }
 
-    result["duration_interpretation"] = (
-        result["activity_type"]
-        .map(interpretation_map)
+    result[
+        "duration_interpretation"
+    ] = (
+        result[
+            "activity_type"
+        ]
+        .map(
+            interpretation_map
+        )
     )
 
     return result
 
+
+# =========================================================
+# Summaries
+# =========================================================
 
 def build_flow_summary(
     classified_variants: pd.DataFrame,
@@ -476,17 +889,33 @@ def build_flow_summary(
         .reset_index()
     )
 
-    summary["share_pct"] = (
-        summary["cases"]
-        / total_cases
-        * 100
-    )
+    if total_cases > 0:
+        summary[
+            "share_pct"
+        ] = (
+            summary[
+                "cases"
+            ]
+            / total_cases
+            * 100
+        )
 
-    summary = summary.sort_values(
-        by="cases",
-        ascending=False,
-        kind="stable",
-    ).reset_index(drop=True)
+    else:
+        summary[
+            "share_pct"
+        ] = 0.0
+
+    summary = (
+        summary
+        .sort_values(
+            by="cases",
+            ascending=False,
+            kind="stable",
+        )
+        .reset_index(
+            drop=True
+        )
+    )
 
     return summary
 
@@ -519,24 +948,42 @@ def build_transition_summary(
         ].sum()
     )
 
-    summary[
-        "transition_volume_share_pct"
-    ] = (
+    if total_occurrences > 0:
         summary[
-            "transition_case_occurrences"
-        ]
-        / total_occurrences
-        * 100
-    )
+            "transition_volume_share_pct"
+        ] = (
+            summary[
+                "transition_case_occurrences"
+            ]
+            / total_occurrences
+            * 100
+        )
 
-    summary = summary.sort_values(
-        by="transition_case_occurrences",
-        ascending=False,
-        kind="stable",
-    ).reset_index(drop=True)
+    else:
+        summary[
+            "transition_volume_share_pct"
+        ] = 0.0
+
+    summary = (
+        summary
+        .sort_values(
+            by=(
+                "transition_case_occurrences"
+            ),
+            ascending=False,
+            kind="stable",
+        )
+        .reset_index(
+            drop=True
+        )
+    )
 
     return summary
 
+
+# =========================================================
+# Insight generation
+# =========================================================
 
 def build_insights(
     classified_variants: pd.DataFrame,
@@ -568,8 +1015,8 @@ def build_insights(
         )
 
         insights.append(
-            "O caminho principal completo representa "
-            f"{core_share:.2f}% dos casos analisados."
+            "The complete core path represents "
+            f"{core_share:.2f}% of analyzed cases."
         )
 
     exception_cases = (
@@ -589,9 +1036,8 @@ def build_insights(
         )
 
         insights.append(
-            "Caminhos contendo pendência ou retorno "
-            f"aparecem em {exception_share:.2f}% "
-            "dos casos."
+            "Paths containing exception activities appear in "
+            f"{exception_share:.2f}% of analyzed cases."
         )
 
     exit_cases = (
@@ -611,9 +1057,8 @@ def build_insights(
         )
 
         insights.append(
-            "Caminhos contendo cancelamento ou rejeição "
-            f"aparecem em {exit_share:.2f}% "
-            "dos casos."
+            "Paths containing exit activities appear in "
+            f"{exit_share:.2f}% of analyzed cases."
         )
 
     bypass_transitions = (
@@ -631,15 +1076,15 @@ def build_insights(
 
     if not bypass_transitions.empty:
         top_bypass = (
-            bypass_transitions.iloc[0]
+            bypass_transitions.iloc[
+                0
+            ]
         )
 
         insights.append(
-            "O bypass de maior volume observado é "
-            f"'{top_bypass['transition']}', "
-            f"presente em "
-            f"{int(top_bypass['case_count']):,} "
-            "casos da transição observada."
+            "The highest-volume observed bypass is "
+            f"'{top_bypass['transition']}', with "
+            f"{int(top_bypass['case_count']):,} observed cases."
         )
 
     operational_activities = (
@@ -655,33 +1100,40 @@ def build_insights(
             ]
         )
         .sort_values(
-            by="median_duration_hours",
+            by=(
+                "median_duration_hours"
+            ),
             ascending=False,
         )
     )
 
     if not operational_activities.empty:
         top_operational = (
-            operational_activities.iloc[0]
+            operational_activities.iloc[
+                0
+            ]
         )
 
         insights.append(
-            "Entre as fases classificadas como "
-            "operacionais, a maior mediana de duração "
-            f"é observada em "
+            "Among activities classified as operational, "
+            "the highest median duration is observed in "
             f"'{top_operational['activity']}' "
             f"({top_operational['median_duration_hours']:.2f} h)."
         )
 
     insights.append(
-        "As classificações são sinais analíticos "
-        "baseados no histórico disponível e não "
-        "substituem validação do processo com o "
-        "responsável operacional."
+        "Classifications are analytical signals derived from "
+        "the available process history and should be validated "
+        "with operational context before being treated as "
+        "errors, bottlenecks, or non-conformities."
     )
 
     return insights
 
+
+# =========================================================
+# Output
+# =========================================================
 
 def save_results(
     classified_variants: pd.DataFrame,
@@ -690,6 +1142,7 @@ def save_results(
     flow_summary: pd.DataFrame,
     transition_summary: pd.DataFrame,
     insights: list[str],
+    profile: FlowProfile,
     output_dir: Path,
 ) -> None:
     output_dir.mkdir(
@@ -747,8 +1200,52 @@ def save_results(
                 f"{index}. {insight}\n"
             )
 
+    profile_snapshot = {
+        "profile_name": (
+            profile.profile_name
+        ),
+        "core_path": list(
+            profile.core_path
+        ),
+        "exception_activities": sorted(
+            profile.exception_activities
+        ),
+        "exit_activities": sorted(
+            profile.exit_activities
+        ),
+        "optional_rule_activities": sorted(
+            profile.optional_rule_activities
+        ),
+        "operational_activities": sorted(
+            profile.operational_activities
+        ),
+        "waiting_activities": sorted(
+            profile.waiting_activities
+        ),
+        "terminal_activities": sorted(
+            profile.terminal_activities
+        ),
+    }
+
+    (
+        output_dir
+        / "profile_used.json"
+    ).write_text(
+        json.dumps(
+            profile_snapshot,
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+
+# =========================================================
+# Console
+# =========================================================
 
 def print_summary(
+    profile: FlowProfile,
     flow_summary: pd.DataFrame,
     classified_transitions: pd.DataFrame,
     insights: list[str],
@@ -764,10 +1261,13 @@ def print_summary(
     )
     print("=" * 76)
 
+    print(
+        f"Profile: {profile.profile_name}"
+    )
+
     print()
     print(
-        "Distribuição dos casos "
-        "por classificação principal:"
+        "Case distribution by primary classification:"
     )
 
     for _, row in (
@@ -775,9 +1275,9 @@ def print_summary(
     ):
         print(
             f"  {row['primary_flow_class']:<28} "
-            f"{int(row['cases']):>7,} casos | "
+            f"{int(row['cases']):>7,} cases | "
             f"{row['share_pct']:>6.2f}% | "
-            f"{int(row['variants']):>4} variantes"
+            f"{int(row['variants']):>4} variants"
         )
 
     bypasses = (
@@ -797,17 +1297,21 @@ def print_summary(
     if not bypasses.empty:
         print()
         print(
-            "Principais bypasses observados:"
+            "Top observed bypasses:"
         )
 
-        for _, row in bypasses.iterrows():
+        for _, row in (
+            bypasses.iterrows()
+        ):
             print(
                 f"  {int(row['case_count']):>7,} | "
                 f"{row['transition']}"
             )
 
     print()
-    print("Insights iniciais:")
+    print(
+        "Initial insights:"
+    )
 
     for index, insight in enumerate(
         insights,
@@ -818,7 +1322,10 @@ def print_summary(
         )
 
     print()
-    print("Arquivos gerados:")
+    print(
+        "Generated files:"
+    )
+
     print(
         f"  {output_dir.resolve()}"
     )
@@ -827,6 +1334,10 @@ def print_summary(
     print()
 
 
+# =========================================================
+# Main
+# =========================================================
+
 def main() -> None:
     args = parse_arguments()
 
@@ -834,8 +1345,16 @@ def main() -> None:
         args.discovery_dir.resolve()
     )
 
+    profile_path = (
+        args.profile.resolve()
+    )
+
     output_dir = (
         args.output_dir.resolve()
+    )
+
+    profile = load_profile(
+        profile_path
     )
 
     variants = load_csv(
@@ -875,19 +1394,24 @@ def main() -> None:
 
     classified_transitions = (
         classify_transitions(
-            transitions
+            transitions=transitions,
+            profile=profile,
         )
     )
 
     classified_variants = (
         classify_variants(
-            variants
+            variants=variants,
+            profile=profile,
         )
     )
 
     activity_intelligence = (
         build_activity_intelligence(
-            activity_summary
+            activity_summary=(
+                activity_summary
+            ),
+            profile=profile,
         )
     )
 
@@ -930,10 +1454,12 @@ def main() -> None:
             transition_summary
         ),
         insights=insights,
+        profile=profile,
         output_dir=output_dir,
     )
 
     print_summary(
+        profile=profile,
         flow_summary=flow_summary,
         classified_transitions=(
             classified_transitions
