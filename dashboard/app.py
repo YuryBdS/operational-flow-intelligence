@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -21,9 +21,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 INTELLIGENCE_DIR = (
     PROJECT_ROOT
-    / "data"
-    / "output"
-    / "intelligence"
+    / "examples"
+    / "demo_intelligence"
 )
 
 
@@ -37,7 +36,7 @@ def load_csv(filename: str) -> pd.DataFrame:
 
     if not path.exists():
         raise FileNotFoundError(
-            f"Arquivo nÃ£o encontrado: {path}"
+            f"Arquivo não encontrado: {path}"
         )
 
     return pd.read_csv(
@@ -166,8 +165,8 @@ try:
 
 except FileNotFoundError as error:
     st.error(
-        "Os arquivos de inteligÃªncia ainda nÃ£o estÃ£o "
-        "disponÃ­veis."
+        "Os arquivos de inteligência ainda não estão "
+        "disponíveis."
     )
 
     st.code(str(error))
@@ -325,7 +324,7 @@ metric_3.metric(
 )
 
 metric_4.metric(
-    "Casos com exceÃ§Ã£o",
+    "Casos com exceção",
     format_percent(exception_share),
 )
 
@@ -353,7 +352,7 @@ overview_tab, flow_tab, time_tab, insight_tab = (
 with overview_tab:
 
     st.subheader(
-        "DistribuiÃ§Ã£o do comportamento do processo"
+        "Distribuição do comportamento do processo"
     )
 
     flow_chart_data = (
@@ -374,10 +373,10 @@ with overview_tab:
         labels={
             "cases": "Casos",
             "primary_flow_class": (
-                "ClassificaÃ§Ã£o"
+                "Classificação"
             ),
             "share_pct": (
-                "ParticipaÃ§Ã£o"
+                "Participação"
             ),
         },
         hover_data={
@@ -489,7 +488,7 @@ with overview_tab:
 with flow_tab:
 
     st.subheader(
-        "TransiÃ§Ãµes dominantes"
+        "Transições dominantes"
     )
 
     dominant_transitions = (
@@ -526,13 +525,13 @@ with flow_tab:
                     "Destino"
                 ),
                 "flow_class": (
-                    "ClassificaÃ§Ã£o"
+                    "Classificação"
                 ),
                 "case_count": (
                     "Casos"
                 ),
                 "outgoing_share_pct": (
-                    "% das saÃ­das observadas"
+                    "% das saídas observadas"
                 ),
             }
         ),
@@ -606,7 +605,7 @@ with flow_tab:
 
         st.caption(
             "Bypass Flow representa uma etapa "
-            "aparentemente pulada na sequÃªncia "
+            "aparentemente pulada na sequência "
             "observada. O sinal deve ser validado "
             "com o contexto operacional."
         )
@@ -649,7 +648,7 @@ with time_tab:
         text="median_duration_hours",
         labels={
             "median_duration_hours": (
-                "Mediana de duraÃ§Ã£o (horas)"
+                "Mediana de duração (horas)"
             ),
             "activity": "",
         },
@@ -662,7 +661,7 @@ with time_tab:
 
     time_chart.update_layout(
         xaxis_title=(
-            "Mediana de duraÃ§Ã£o (horas)"
+            "Mediana de duração (horas)"
         ),
         yaxis_title="",
         showlegend=False,
@@ -733,10 +732,10 @@ with time_tab:
                     "Cobertura dos casos (%)"
                 ),
                 "median_duration": (
-                    "DuraÃ§Ã£o mediana"
+                    "Duração mediana"
                 ),
                 "duration_interpretation": (
-                    "InterpretaÃ§Ã£o"
+                    "Interpretação"
                 ),
             }
         ),
@@ -746,7 +745,7 @@ with time_tab:
 
     st.caption(
         "Estados terminais e tempos de ciclo de "
-        "negÃ³cio nÃ£o sÃ£o tratados automaticamente "
+        "negócio não são tratados automaticamente "
         "como gargalos operacionais."
     )
 
@@ -763,7 +762,7 @@ with insight_tab:
 
     if not insights:
         st.info(
-            "Nenhum insight disponÃ­vel."
+            "Nenhum insight disponível."
         )
 
     else:
@@ -778,7 +777,7 @@ with insight_tab:
     st.divider()
 
     st.subheader(
-        "VisÃ£o executiva"
+        "Visão executiva"
     )
 
     executive_col_1, executive_col_2 = (
@@ -795,8 +794,8 @@ with insight_tab:
         )
 
         st.caption(
-            "Casos cuja classificaÃ§Ã£o principal "
-            "contÃ©m cancelamento ou rejeiÃ§Ã£o."
+            "Casos cuja classificação principal "
+            "contém cancelamento ou rejeição."
         )
 
     with executive_col_2:
@@ -816,16 +815,16 @@ with insight_tab:
         )
 
         st.caption(
-            "Casos cuja classificaÃ§Ã£o principal "
-            "contÃ©m uma etapa aparentemente pulada."
+            "Casos cuja classificação principal "
+            "contém uma etapa aparentemente pulada."
         )
 
     st.warning(
-        "As classificaÃ§Ãµes representam sinais "
-        "analÃ­ticos derivados do histÃ³rico disponÃ­vel. "
-        "Elas nÃ£o devem ser interpretadas isoladamente "
-        "como erro, nÃ£o conformidade ou gargalo sem "
-        "validaÃ§Ã£o do processo."
+        "As classificações representam sinais "
+        "analíticos derivados do histórico disponível. "
+        "Elas não devem ser interpretadas isoladamente "
+        "como erro, não conformidade ou gargalo sem "
+        "validação do processo."
     )
 
 
@@ -836,6 +835,6 @@ with insight_tab:
 st.divider()
 
 st.caption(
-    "Operational Flow Intelligence Â· "
+    "Operational Flow Intelligence · "
     "Process Discovery + Flow Intelligence"
 )
