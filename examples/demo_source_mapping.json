@@ -1,0 +1,26 @@
+{
+  "mapping_name": "Synthetic Operational Report",
+  "sheet_name": "Report",
+  "columns": {
+    "case_id": [
+      "Código"
+    ],
+    "current_phase": [
+      "Fase atual"
+    ],
+    "card_type": [
+      "Tipo de card"
+    ],
+    "industry": [
+      "Indústria / Principal",
+      "Indústria"
+    ]
+  },
+  "phase_history": {
+    "entry_prefix": "Primeira vez que entrou na fase ",
+    "exit_prefix": "Última vez que saiu da fase ",
+    "duration_prefix": "Tempo total na fase ",
+    "duration_suffix": " (dias)",
+    "duration_unit": "days"
+  }
+}
