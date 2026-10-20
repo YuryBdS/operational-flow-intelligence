@@ -2,6 +2,9 @@
 
 **From recorded process history to observable operational behavior.**
 
+### 🚀 [Open the Live Control Tower](https://operational-flow-intelligence-zi7a28wxhkwiw8v5az69fr.streamlit.app/)
+
+Explore the interactive dashboard using the public synthetic dataset included in this repository.
 Operational Flow Intelligence is a Python-based process discovery and operational analytics project that transforms structured historical data into event logs, process variants, transition analysis, flow classifications, cycle-time signals and management insights.
 
 The project was designed to answer a simple question:
