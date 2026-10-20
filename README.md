@@ -21,6 +21,12 @@ This project converts that structured history into an analytical pipeline:
 
 ```text
 Operational Report
+        +
+Source Mapping
+        +
+Flow Profile
+        ↓
+Pre-flight Validation
         ↓
 Data-to-Event-Log Engine
         ↓
@@ -35,7 +41,6 @@ Flow Intelligence
 Core Flow + Exceptions + Exits + Bypasses
         ↓
 Control Tower
-```
 
 The result is a reusable framework for understanding how cases actually move through an operational process.
 
@@ -268,6 +273,7 @@ Intake
 
 ```text
 operational-flow-intelligence/
+operational-flow-intelligence/
 │
 ├── dashboard/
 │   └── app.py
@@ -280,6 +286,7 @@ operational-flow-intelligence/
 │
 ├── examples/
 │   ├── README.md
+│   ├── demo_source_mapping.json
 │   ├── demo_flow_profile.json
 │   ├── synthetic_operational_report.xlsx
 │   └── demo_intelligence/
@@ -293,8 +300,10 @@ operational-flow-intelligence/
 │
 ├── src/
 │   ├── event_log.py
+│   ├── preflight_validation.py
 │   ├── process_discovery.py
 │   ├── flow_intelligence.py
+│   ├── run_pipeline.py
 │   └── generate_synthetic_data.py
 │
 ├── .gitignore
@@ -324,31 +333,62 @@ Install the dependencies:
 
 ## Run the public demo
 
+## Run the public demo
+
+The repository includes everything required to execute the synthetic demonstration locally.
+
+The pipeline now includes a pre-flight validation layer that checks the input file, source mapping, process profile and source structure before processing begins.
+
 ### 1. Generate the synthetic dataset
 
 ```powershell
 .\.venv\Scripts\python.exe .\src\generate_synthetic_data.py
 ```
 
-### 2. Convert the report into an event log
+### 2. Run the complete pipeline
 
 ```powershell
-.\.venv\Scripts\python.exe .\src\event_log.py ".\examples\synthetic_operational_report.xlsx" -o ".\data\output\synthetic\event_log.csv"
+.\.venv\Scripts\python.exe .\src\run_pipeline.py ".\examples\synthetic_operational_report.xlsx" --mapping ".\examples\demo_source_mapping.json" --profile ".\examples\demo_flow_profile.json" -o ".\data\output\synthetic"
 ```
 
-### 3. Run Process Discovery
+A single command now executes:
 
-```powershell
-.\.venv\Scripts\python.exe .\src\process_discovery.py ".\data\output\synthetic\event_log.csv" -o ".\data\output\synthetic\discovery"
+```text
+Pre-flight Validation
+        ↓
+Data-to-Event-Log
+        ↓
+Process Discovery
+        ↓
+Flow Intelligence
 ```
 
-### 4. Run Flow Intelligence
+If the pre-flight validation identifies a blocking issue, the pipeline stops before data processing begins.
 
-```powershell
-.\.venv\Scripts\python.exe .\src\flow_intelligence.py ".\data\output\synthetic\discovery" --profile ".\examples\demo_flow_profile.json" -o ".\data\output\synthetic\intelligence"
+Successful execution generates:
+
+```text
+data/output/synthetic/
+│
+├── event_log.csv
+│
+├── discovery/
+│   ├── activity_summary.csv
+│   ├── case_paths.csv
+│   ├── transitions.csv
+│   └── variants.csv
+│
+└── intelligence/
+    ├── activity_intelligence.csv
+    ├── classified_transitions.csv
+    ├── classified_variants.csv
+    ├── flow_summary.csv
+    ├── insights.txt
+    ├── profile_used.json
+    └── transition_summary.csv
 ```
 
-### 5. Open the Control Tower
+### 3. Open the Control Tower
 
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run .\dashboard\app.py
@@ -360,9 +400,11 @@ The application will normally be available at:
 http://localhost:8501
 ```
 
----
+The public Control Tower uses the pre-generated synthetic intelligence outputs included under:
 
-## Analytical principles
+```text
+examples/demo_intelligence/
+```
 
 The project intentionally separates different analytical concepts.
 
@@ -451,6 +493,12 @@ Operational Flow Intelligence currently covers:
 
 ```text
 Operational Data
+      +
+Source Mapping
+      +
+Flow Profile
+      ↓
+Pre-flight Validation
       ↓
 Event Log
       ↓
@@ -461,19 +509,32 @@ Flow Intelligence
 Control Tower
 ```
 
+Current technical capabilities include:
+
+- configurable source mapping
+- reusable flow profiles
+- pre-flight validation
+- end-to-end pipeline execution
+- event-log generation
+- process discovery
+- variant and transition analysis
+- flow classification
+- operational duration signals
+- synthetic public demonstration
+- interactive Control Tower
+
 Potential future evolution includes:
 
-- configurable column mapping
 - richer event-log standards
 - case-level filtering
 - segmentation by process attributes
 - temporal trend analysis
+- rework and loop detection
 - deviation scoring
 - bottleneck prioritization
+- conformance checking
 - designed-process vs. executed-process comparison
 - automated analytical recommendations
-
----
 
 ## Why this project exists
 
