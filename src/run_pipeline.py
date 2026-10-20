@@ -42,13 +42,8 @@ def parse_arguments() -> argparse.Namespace:
         "-o",
         "--output-dir",
         type=Path,
-        default=Path(
-            "data/output/pipeline"
-        ),
-        help=(
-            "Diretório base para os outputs "
-            "do pipeline."
-        ),
+        default=Path("data/output/pipeline"),
+        help="Diretório base para os outputs do pipeline.",
     )
 
     return parser.parse_args()
@@ -63,55 +58,71 @@ def run_step(
     print(f"STEP: {step_name}")
     print("=" * 72)
 
-    subprocess.run(
-        command,
-        check=True,
-        cwd=PROJECT_ROOT,
-    )
+    try:
+        subprocess.run(
+            command,
+            check=True,
+            cwd=PROJECT_ROOT,
+        )
+
+    except subprocess.CalledProcessError as error:
+        print()
+        print("=" * 72)
+        print("PIPELINE STOPPED")
+        print("=" * 72)
+        print(f"Failed step : {step_name}")
+        print(f"Exit code   : {error.returncode}")
+        print("=" * 72)
+        print()
+
+        raise SystemExit(
+            error.returncode
+        ) from None
 
 
 def main() -> None:
     args = parse_arguments()
 
-    input_file = (
-        args.input_file.resolve()
+    input_file = args.input_file.resolve()
+    mapping_file = args.mapping.resolve()
+    profile_file = args.profile.resolve()
+    output_dir = args.output_dir.resolve()
+
+    event_log_file = output_dir / "event_log.csv"
+    discovery_dir = output_dir / "discovery"
+    intelligence_dir = output_dir / "intelligence"
+
+    python_executable = sys.executable
+
+    # =====================================================
+    # 1. Pre-flight validation
+    # =====================================================
+
+    run_step(
+        "PRE-FLIGHT VALIDATION",
+        [
+            python_executable,
+            str(
+                SRC_DIR
+                / "preflight_validation.py"
+            ),
+            str(input_file),
+            "--mapping",
+            str(mapping_file),
+            "--profile",
+            str(profile_file),
+        ],
     )
 
-    mapping_file = (
-        args.mapping.resolve()
-    )
-
-    profile_file = (
-        args.profile.resolve()
-    )
-
-    output_dir = (
-        args.output_dir.resolve()
-    )
-
-    event_log_file = (
-        output_dir
-        / "event_log.csv"
-    )
-
-    discovery_dir = (
-        output_dir
-        / "discovery"
-    )
-
-    intelligence_dir = (
-        output_dir
-        / "intelligence"
-    )
-
+    # Outputs are created only after validation passes.
     output_dir.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    python_executable = (
-        sys.executable
-    )
+    # =====================================================
+    # 2. Data to Event Log
+    # =====================================================
 
     run_step(
         "DATA TO EVENT LOG",
@@ -129,6 +140,10 @@ def main() -> None:
         ],
     )
 
+    # =====================================================
+    # 3. Process Discovery
+    # =====================================================
+
     run_step(
         "PROCESS DISCOVERY",
         [
@@ -142,6 +157,10 @@ def main() -> None:
             str(discovery_dir),
         ],
     )
+
+    # =====================================================
+    # 4. Flow Intelligence
+    # =====================================================
 
     run_step(
         "FLOW INTELLIGENCE",
@@ -159,29 +178,24 @@ def main() -> None:
         ],
     )
 
+    # =====================================================
+    # Pipeline completed
+    # =====================================================
+
     print()
     print("=" * 72)
-    print(
-        "OPERATIONAL FLOW INTELLIGENCE"
-    )
-    print(
-        "PIPELINE COMPLETED SUCCESSFULLY"
-    )
+    print("OPERATIONAL FLOW INTELLIGENCE")
+    print("PIPELINE COMPLETED SUCCESSFULLY")
     print("=" * 72)
 
     print(
-        f"Event log     : "
-        f"{event_log_file}"
+        f"Event log     : {event_log_file}"
     )
-
     print(
-        f"Discovery     : "
-        f"{discovery_dir}"
+        f"Discovery     : {discovery_dir}"
     )
-
     print(
-        f"Intelligence  : "
-        f"{intelligence_dir}"
+        f"Intelligence  : {intelligence_dir}"
     )
 
     print("=" * 72)
