@@ -1,0 +1,43 @@
+# =========================================================
+# Operational Flow Intelligence
+# =========================================================
+
+# Sensitive operational data
+data/input/*
+data/output/*
+
+!data/input/.gitkeep
+!data/output/.gitkeep
+
+# Never publish operational datasets
+*.xlsx
+*.xls
+*.csv
+*.parquet
+
+# Future synthetic examples may be explicitly allowed
+!examples/*.xlsx
+!examples/*.csv
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
